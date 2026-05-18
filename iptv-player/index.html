@@ -3,130 +3,306 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IPTV Player Privado</title>
+  <title>StreamBox — IPTV Player</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="src/style.css" />
 </head>
 <body>
-  <div id="app">
-    <!-- Sidebar -->
-    <aside id="sidebar">
-      <div class="sidebar-header">
-        <h1>📺 IPTV Player</h1>
-        <button id="btn-import" title="Importar lista M3U">＋ Importar M3U</button>
-      </div>
 
-      <div id="search-wrap">
-        <input id="search" type="text" placeholder="🔍 Buscar canal..." autocomplete="off" />
-      </div>
+<div id="app">
 
+  <!-- ══ SIDEBAR ══════════════════════════════════════════ -->
+  <aside id="sidebar">
+
+    <div class="sidebar-top">
+      <div class="brand">
+        <span class="brand-icon">▶</span>
+        <span class="brand-name">StreamBox</span>
+      </div>
+      <button id="btn-import" class="btn-add" title="Agregar lista">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Agregar
+      </button>
+    </div>
+
+    <div class="search-wrap">
+      <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input id="search" type="text" placeholder="Buscar canal..." autocomplete="off" spellcheck="false" />
+    </div>
+
+    <div id="group-tabs-wrap">
       <div id="group-tabs"></div>
+    </div>
 
-      <ul id="channel-list"></ul>
+    <div class="list-header">
+      <span class="list-label">Canales</span>
+      <span id="channel-count" class="count-badge"></span>
+    </div>
 
-      <div id="sidebar-footer">
-        <button id="btn-clear" title="Borrar todas las listas">🗑 Limpiar listas</button>
-        <span id="channel-count"></span>
+    <ul id="channel-list"></ul>
+
+    <div class="sidebar-bottom">
+      <button id="btn-clear" class="btn-clear">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+          <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+        </svg>
+        Limpiar todo
+      </button>
+    </div>
+
+  </aside>
+
+  <!-- ══ PLAYER ════════════════════════════════════════════ -->
+  <main id="player-area">
+
+    <div id="player-wrapper">
+      <video id="video-player" controls autoplay></video>
+
+      <!-- Welcome screen -->
+      <div id="player-overlay" class="visible">
+        <div class="welcome-bg"></div>
+        <div class="welcome-content">
+          <div class="welcome-logo">
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+              <rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/>
+              <polygon points="10 11 10 18 16 14.5" fill="currentColor" stroke="none"/>
+            </svg>
+          </div>
+          <h2 class="welcome-title">Bienvenido a StreamBox</h2>
+          <p class="welcome-sub">Tu reproductor IPTV privado y seguro</p>
+          <div class="welcome-actions">
+            <button class="welcome-btn primary" id="overlay-btn-xtream">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              Conectar con Xtream
+            </button>
+            <label class="welcome-btn secondary" id="drop-zone">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              Abrir archivo .m3u
+              <input type="file" id="file-input" accept=".m3u,.m3u8" hidden />
+            </label>
+          </div>
+        </div>
       </div>
-    </aside>
+    </div>
 
-    <!-- Player area -->
-    <main id="player-area">
-      <div id="player-wrapper">
-        <video id="video-player" controls autoplay></video>
-        <div id="player-overlay" class="visible">
-          <div class="overlay-icon">📺</div>
-          <p>Importa una lista M3U y selecciona un canal para comenzar</p>
-          <label class="drop-zone" id="drop-zone">
-            <span>Arrastra tu archivo .m3u aquí o haz clic para seleccionar</span>
-            <input type="file" id="file-input" accept=".m3u,.m3u8" hidden />
+    <!-- Now playing bar -->
+    <div id="now-playing">
+      <div id="np-left">
+        <div id="np-logo-wrap">
+          <div id="np-logo-placeholder">▶</div>
+          <img id="np-logo" src="" alt="" hidden />
+        </div>
+        <div id="np-info">
+          <span id="np-title">Sin reproducción</span>
+          <span id="np-group"></span>
+        </div>
+      </div>
+      <div id="np-controls">
+        <button class="ctrl-btn" id="btn-mute" title="Silenciar (M)">
+          <svg id="icon-vol" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/>
+          </svg>
+        </button>
+        <input id="volume-slider" type="range" min="0" max="1" step="0.05" value="1" title="Volumen" />
+        <div class="ctrl-divider"></div>
+        <button class="ctrl-btn" id="btn-pip" title="Picture in Picture">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><rect x="12" y="10" width="9" height="7" rx="1"/>
+          </svg>
+        </button>
+        <button class="ctrl-btn" id="btn-fullscreen" title="Pantalla completa (F)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+            <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══ IMPORT MODAL ══════════════════════════════════════ -->
+<div id="modal-import" class="modal hidden">
+  <div class="modal-box">
+
+    <div class="modal-header">
+      <div>
+        <h2>Agregar lista</h2>
+        <p class="modal-sub">Elige cómo quieres conectar tu lista de canales</p>
+      </div>
+      <button class="modal-close" id="btn-modal-cancel">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Method selector cards -->
+    <div class="method-grid">
+      <button class="method-card active" data-tab="xtream">
+        <span class="method-icon">🔌</span>
+        <span class="method-label">Xtream Codes</span>
+        <span class="method-desc">Usuario y contraseña</span>
+      </button>
+      <button class="method-card" data-tab="url">
+        <span class="method-icon">🔗</span>
+        <span class="method-label">URL directa</span>
+        <span class="method-desc">Enlace .m3u / .m3u8</span>
+      </button>
+      <button class="method-card" data-tab="file">
+        <span class="method-icon">📁</span>
+        <span class="method-label">Archivo local</span>
+        <span class="method-desc">Desde tu dispositivo</span>
+      </button>
+      <button class="method-card" data-tab="paste">
+        <span class="method-icon">📋</span>
+        <span class="method-label">Pegar texto</span>
+        <span class="method-desc">Contenido M3U directo</span>
+      </button>
+    </div>
+
+    <!-- ── Xtream Codes ── -->
+    <div id="tab-xtream" class="tab-content active">
+
+      <!-- Saved accounts -->
+      <div id="xc-saved-section">
+        <div class="section-label">Cuentas guardadas</div>
+        <div id="xtream-saved-list"></div>
+      </div>
+
+      <div class="form-divider"><span>Nueva conexión</span></div>
+
+      <div class="field-group">
+        <label class="field-label">Servidor</label>
+        <div class="input-wrap">
+          <svg class="input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <rect x="2" y="3" width="20" height="4" rx="1"/><rect x="2" y="10" width="20" height="4" rx="1"/><rect x="2" y="17" width="20" height="4" rx="1"/>
+            <circle cx="18" cy="5" r="1" fill="currentColor"/><circle cx="18" cy="12" r="1" fill="currentColor"/>
+          </svg>
+          <input id="xc-server" type="url" placeholder="http://miproveedor.com:8080" autocomplete="off" />
+        </div>
+      </div>
+
+      <div class="fields-row">
+        <div class="field-group">
+          <label class="field-label">Usuario</label>
+          <div class="input-wrap">
+            <svg class="input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+            <input id="xc-user" type="text" placeholder="usuario" autocomplete="off" />
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Contraseña</label>
+          <div class="input-wrap">
+            <svg class="input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+            </svg>
+            <input id="xc-pass" type="password" placeholder="••••••••" autocomplete="new-password" />
+            <button type="button" id="btn-toggle-pass" class="input-action">
+              <svg id="icon-eye" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Contenido a importar</label>
+        <div class="toggle-group">
+          <label class="toggle-pill">
+            <input type="checkbox" name="xc-type" value="live" checked />
+            <span>📡 En vivo</span>
+          </label>
+          <label class="toggle-pill">
+            <input type="checkbox" name="xc-type" value="vod" />
+            <span>🎬 Películas</span>
+          </label>
+          <label class="toggle-pill">
+            <input type="checkbox" name="xc-type" value="series" />
+            <span>📺 Series</span>
           </label>
         </div>
       </div>
 
-      <div id="now-playing">
-        <span id="now-title">Sin reproducción</span>
-        <div id="player-controls-extra">
-          <button id="btn-fullscreen" title="Pantalla completa">⛶</button>
-          <button id="btn-pip" title="Picture in Picture">⧉</button>
-          <button id="btn-mute" title="Silenciar">🔊</button>
-          <input id="volume-slider" type="range" min="0" max="1" step="0.05" value="1" title="Volumen" />
-        </div>
-      </div>
-    </main>
-  </div>
+      <label class="save-check">
+        <input type="checkbox" id="xc-save" checked />
+        <span class="checkmark"></span>
+        Recordar esta cuenta en este dispositivo
+      </label>
 
-  <!-- Import Modal -->
-  <div id="modal-import" class="modal hidden">
-    <div class="modal-box">
-      <h2>Importar Lista</h2>
-      <div class="import-tabs">
-        <button class="tab-btn active" data-tab="xtream">Xtream Codes</button>
-        <button class="tab-btn" data-tab="url">URL M3U</button>
-        <button class="tab-btn" data-tab="file">Archivo</button>
-        <button class="tab-btn" data-tab="paste">Pegar texto</button>
-      </div>
-
-      <!-- ── Xtream Codes tab ── -->
-      <div id="tab-xtream" class="tab-content active">
-        <div id="xtream-saved-wrap">
-          <label>Cuentas guardadas:</label>
-          <div id="xtream-saved-list"><span class="muted-note">Ninguna cuenta guardada</span></div>
-        </div>
-        <hr class="divider" />
-        <label>Servidor (URL con puerto):</label>
-        <input id="xc-server" type="url" placeholder="http://miservidor.com:8080" autocomplete="off" />
-        <label>Usuario:</label>
-        <input id="xc-user" type="text" placeholder="usuario" autocomplete="off" />
-        <label>Contraseña:</label>
-        <div class="pass-wrap">
-          <input id="xc-pass" type="password" placeholder="contraseña" autocomplete="new-password" />
-          <button type="button" id="btn-toggle-pass" title="Mostrar/ocultar">👁</button>
-        </div>
-        <label>Tipo de contenido:</label>
-        <div class="xc-type-group">
-          <label class="radio-label"><input type="checkbox" name="xc-type" value="live" checked /> En vivo</label>
-          <label class="radio-label"><input type="checkbox" name="xc-type" value="vod" /> Películas (VOD)</label>
-          <label class="radio-label"><input type="checkbox" name="xc-type" value="series" /> Series</label>
-        </div>
-        <label class="checkbox-label">
-          <input type="checkbox" id="xc-save" checked />
-          Guardar cuenta (credenciales en localStorage de este navegador)
-        </label>
-        <small>⚠ Las credenciales se guardan solo en tu navegador, nunca se envían a terceros.</small>
-      </div>
-
-      <!-- ── URL tab ── -->
-      <div id="tab-url" class="tab-content">
-        <label>URL de la lista M3U / M3U8:</label>
-        <input id="input-url" type="url" placeholder="http://..." />
-        <small>⚠ Si falla CORS usa la opción Archivo.</small>
-      </div>
-
-      <!-- ── File tab ── -->
-      <div id="tab-file" class="tab-content">
-        <label class="drop-zone" id="modal-drop-zone">
-          <span id="modal-drop-label">Arrastra el archivo .m3u aquí o haz clic</span>
-          <input type="file" id="modal-file-input" accept=".m3u,.m3u8" hidden />
-        </label>
-      </div>
-
-      <!-- ── Paste tab ── -->
-      <div id="tab-paste" class="tab-content">
-        <label>Pega el contenido M3U aquí:</label>
-        <textarea id="input-paste" rows="8" placeholder="#EXTM3U&#10;#EXTINF:-1 tvg-name=&quot;Canal&quot;,Canal&#10;http://..."></textarea>
-      </div>
-
-      <div class="modal-actions">
-        <button id="btn-modal-cancel">Cancelar</button>
-        <button id="btn-modal-import" class="primary">Conectar / Importar</button>
-      </div>
-      <div id="import-status"></div>
     </div>
-  </div>
 
-  <script src="src/parser.js"></script>
-  <script src="src/storage.js"></script>
-  <script src="src/player.js"></script>
-  <script src="src/app.js"></script>
+    <!-- ── URL ── -->
+    <div id="tab-url" class="tab-content">
+      <div class="field-group">
+        <label class="field-label">Enlace de la lista M3U</label>
+        <div class="input-wrap">
+          <svg class="input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+            <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+          </svg>
+          <input id="input-url" type="url" placeholder="http://..." />
+        </div>
+        <span class="field-hint">Si aparece error CORS, descarga el archivo y usa la opción "Archivo local".</span>
+      </div>
+    </div>
+
+    <!-- ── File ── -->
+    <div id="tab-file" class="tab-content">
+      <label class="dropzone-card" id="modal-drop-zone">
+        <div class="dropzone-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <span id="modal-drop-label" class="dropzone-text">Arrastra tu archivo .m3u aquí</span>
+        <span class="dropzone-hint">o haz clic para seleccionar</span>
+        <input type="file" id="modal-file-input" accept=".m3u,.m3u8" hidden />
+      </label>
+    </div>
+
+    <!-- ── Paste ── -->
+    <div id="tab-paste" class="tab-content">
+      <div class="field-group">
+        <label class="field-label">Pega el contenido M3U</label>
+        <textarea id="input-paste" rows="8" placeholder="#EXTM3U&#10;#EXTINF:-1 tvg-name=&quot;Canal&quot; group-title=&quot;Grupo&quot;,Canal&#10;http://stream.url/live"></textarea>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="modal-footer">
+      <div id="import-status"></div>
+      <button id="btn-modal-import" class="btn-connect">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        <span id="btn-connect-label">Conectar</span>
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script src="src/parser.js"></script>
+<script src="src/storage.js"></script>
+<script src="src/player.js"></script>
+<script src="src/app.js"></script>
 </body>
 </html>
