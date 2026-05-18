@@ -58,19 +58,51 @@
   <!-- Import Modal -->
   <div id="modal-import" class="modal hidden">
     <div class="modal-box">
-      <h2>Importar Lista M3U</h2>
+      <h2>Importar Lista</h2>
       <div class="import-tabs">
-        <button class="tab-btn active" data-tab="url">URL</button>
+        <button class="tab-btn active" data-tab="xtream">Xtream Codes</button>
+        <button class="tab-btn" data-tab="url">URL M3U</button>
         <button class="tab-btn" data-tab="file">Archivo</button>
         <button class="tab-btn" data-tab="paste">Pegar texto</button>
       </div>
 
-      <div id="tab-url" class="tab-content active">
-        <label>URL de la lista M3U / M3U8:</label>
-        <input id="input-url" type="url" placeholder="http://..." />
-        <small>⚠ La URL debe ser accesible desde tu red. Si falla CORS usa la opción de archivo.</small>
+      <!-- ── Xtream Codes tab ── -->
+      <div id="tab-xtream" class="tab-content active">
+        <div id="xtream-saved-wrap">
+          <label>Cuentas guardadas:</label>
+          <div id="xtream-saved-list"><span class="muted-note">Ninguna cuenta guardada</span></div>
+        </div>
+        <hr class="divider" />
+        <label>Servidor (URL con puerto):</label>
+        <input id="xc-server" type="url" placeholder="http://miservidor.com:8080" autocomplete="off" />
+        <label>Usuario:</label>
+        <input id="xc-user" type="text" placeholder="usuario" autocomplete="off" />
+        <label>Contraseña:</label>
+        <div class="pass-wrap">
+          <input id="xc-pass" type="password" placeholder="contraseña" autocomplete="new-password" />
+          <button type="button" id="btn-toggle-pass" title="Mostrar/ocultar">👁</button>
+        </div>
+        <label>Tipo de contenido:</label>
+        <div class="xc-type-group">
+          <label class="radio-label"><input type="checkbox" name="xc-type" value="live" checked /> En vivo</label>
+          <label class="radio-label"><input type="checkbox" name="xc-type" value="vod" /> Películas (VOD)</label>
+          <label class="radio-label"><input type="checkbox" name="xc-type" value="series" /> Series</label>
+        </div>
+        <label class="checkbox-label">
+          <input type="checkbox" id="xc-save" checked />
+          Guardar cuenta (credenciales en localStorage de este navegador)
+        </label>
+        <small>⚠ Las credenciales se guardan solo en tu navegador, nunca se envían a terceros.</small>
       </div>
 
+      <!-- ── URL tab ── -->
+      <div id="tab-url" class="tab-content">
+        <label>URL de la lista M3U / M3U8:</label>
+        <input id="input-url" type="url" placeholder="http://..." />
+        <small>⚠ Si falla CORS usa la opción Archivo.</small>
+      </div>
+
+      <!-- ── File tab ── -->
       <div id="tab-file" class="tab-content">
         <label class="drop-zone" id="modal-drop-zone">
           <span id="modal-drop-label">Arrastra el archivo .m3u aquí o haz clic</span>
@@ -78,14 +110,15 @@
         </label>
       </div>
 
+      <!-- ── Paste tab ── -->
       <div id="tab-paste" class="tab-content">
         <label>Pega el contenido M3U aquí:</label>
-        <textarea id="input-paste" rows="10" placeholder="#EXTM3U&#10;#EXTINF:-1 tvg-name=&quot;Canal&quot;,Canal&#10;http://..."></textarea>
+        <textarea id="input-paste" rows="8" placeholder="#EXTM3U&#10;#EXTINF:-1 tvg-name=&quot;Canal&quot;,Canal&#10;http://..."></textarea>
       </div>
 
       <div class="modal-actions">
         <button id="btn-modal-cancel">Cancelar</button>
-        <button id="btn-modal-import" class="primary">Importar</button>
+        <button id="btn-modal-import" class="primary">Conectar / Importar</button>
       </div>
       <div id="import-status"></div>
     </div>

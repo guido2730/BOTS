@@ -305,6 +305,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .tab-content label { font-size: 13px; color: var(--text-muted); }
 
 .tab-content input[type="url"],
+.tab-content input[type="text"],
+.tab-content input[type="password"],
 .tab-content textarea {
   background: var(--surface2);
   border: 1px solid var(--border);
@@ -314,12 +316,99 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   font-size: 13px;
   outline: none;
   resize: vertical;
-  font-family: monospace;
+  font-family: inherit;
+  width: 100%;
 }
 .tab-content input[type="url"]:focus,
+.tab-content input[type="text"]:focus,
+.tab-content input[type="password"]:focus,
 .tab-content textarea:focus { border-color: var(--accent); }
 
 .tab-content small { font-size: 11px; color: var(--text-muted); }
+
+/* ── Xtream Codes styles ── */
+.pass-wrap { display: flex; gap: 6px; }
+.pass-wrap input { flex: 1; }
+
+#btn-toggle-pass {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  padding: 0 10px;
+  cursor: pointer;
+  font-size: 14px;
+  flex-shrink: 0;
+  transition: border-color .15s;
+}
+#btn-toggle-pass:hover { border-color: var(--accent); }
+
+.xc-type-group { display: flex; gap: 16px; flex-wrap: wrap; }
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+.radio-label input { accent-color: var(--accent); cursor: pointer; }
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.checkbox-label input { accent-color: var(--accent); cursor: pointer; }
+
+.divider { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
+
+#xtream-saved-wrap { display: flex; flex-direction: column; gap: 6px; }
+#xtream-saved-list { display: flex; flex-direction: column; gap: 4px; }
+
+.muted-note { font-size: 12px; color: var(--text-muted); font-style: italic; }
+
+.xc-account-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 6px;
+}
+
+.xc-account-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.xc-account-btn:hover { color: var(--accent); }
+
+.xc-account-del {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: color .15s;
+}
+.xc-account-del:hover { color: var(--danger); }
 
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
 

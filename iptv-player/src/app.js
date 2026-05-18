@@ -9,32 +9,39 @@
   let activeIndex = -1;
 
   // ── DOM refs ───────────────────────────────────────────────────────────────
-  const videoEl       = document.getElementById('video-player');
-  const overlay       = document.getElementById('player-overlay');
-  const nowTitle      = document.getElementById('now-title');
-  const channelList   = document.getElementById('channel-list');
-  const groupTabs     = document.getElementById('group-tabs');
-  const searchEl      = document.getElementById('search');
-  const channelCount  = document.getElementById('channel-count');
-  const btnImport     = document.getElementById('btn-import');
-  const btnClear      = document.getElementById('btn-clear');
-  const btnFullscreen = document.getElementById('btn-fullscreen');
-  const btnPip        = document.getElementById('btn-pip');
-  const btnMute       = document.getElementById('btn-mute');
-  const volumeSlider  = document.getElementById('volume-slider');
-  const modal         = document.getElementById('modal-import');
-  const btnModalCancel= document.getElementById('btn-modal-cancel');
-  const btnModalImport= document.getElementById('btn-modal-import');
-  const importStatus  = document.getElementById('import-status');
-  const dropZone      = document.getElementById('drop-zone');
-  const fileInput     = document.getElementById('file-input');
-  const modalDropZone = document.getElementById('modal-drop-zone');
-  const modalFileInput= document.getElementById('modal-file-input');
-  const modalDropLabel= document.getElementById('modal-drop-label');
-  const inputUrl      = document.getElementById('input-url');
-  const inputPaste    = document.getElementById('input-paste');
-  const tabBtns       = document.querySelectorAll('.tab-btn');
-  const tabContents   = document.querySelectorAll('.tab-content');
+  const videoEl         = document.getElementById('video-player');
+  const overlay         = document.getElementById('player-overlay');
+  const nowTitle        = document.getElementById('now-title');
+  const channelList     = document.getElementById('channel-list');
+  const groupTabs       = document.getElementById('group-tabs');
+  const searchEl        = document.getElementById('search');
+  const channelCount    = document.getElementById('channel-count');
+  const btnImport       = document.getElementById('btn-import');
+  const btnClear        = document.getElementById('btn-clear');
+  const btnFullscreen   = document.getElementById('btn-fullscreen');
+  const btnPip          = document.getElementById('btn-pip');
+  const btnMute         = document.getElementById('btn-mute');
+  const volumeSlider    = document.getElementById('volume-slider');
+  const modal           = document.getElementById('modal-import');
+  const btnModalCancel  = document.getElementById('btn-modal-cancel');
+  const btnModalImport  = document.getElementById('btn-modal-import');
+  const importStatus    = document.getElementById('import-status');
+  const dropZone        = document.getElementById('drop-zone');
+  const fileInput       = document.getElementById('file-input');
+  const modalDropZone   = document.getElementById('modal-drop-zone');
+  const modalFileInput  = document.getElementById('modal-file-input');
+  const modalDropLabel  = document.getElementById('modal-drop-label');
+  const inputUrl        = document.getElementById('input-url');
+  const inputPaste      = document.getElementById('input-paste');
+  const tabBtns         = document.querySelectorAll('.tab-btn');
+  const tabContents     = document.querySelectorAll('.tab-content');
+  // Xtream Codes fields
+  const xcServer        = document.getElementById('xc-server');
+  const xcUser          = document.getElementById('xc-user');
+  const xcPass          = document.getElementById('xc-pass');
+  const xcSave          = document.getElementById('xc-save');
+  const xcSavedList     = document.getElementById('xtream-saved-list');
+  const btnTogglePass   = document.getElementById('btn-toggle-pass');
 
   // ── Init ───────────────────────────────────────────────────────────────────
   Player.init(videoEl, msg => setStatus(msg, 'error'));
@@ -183,8 +190,132 @@
     reader.readAsText(file, 'utf-8');
   }
 
+  // ── Xtream Codes ───────────────────────────────────────────────────────────
+  function xcNormalizeServer(raw) {
+    let s = raw.trim().replace(/\/+$/, '');
+    if (!/^https?:\/\//i.test(s)) s = 'http://' + s;
+    return s;
+  }
+
+  function xcBuildM3uUrl(server, user, pass) {
+    return `${server}/get.php?username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}&type=m3u_plus&output=ts`;
+  }
+
+  function xcGetSelectedTypes() {
+    return [...document.querySelectorAll('input[name="xc-type"]:checked')].map(el => el.value);
+  }
+
+  async function xcConnect(server, user, pass) {
+    setStatus('Verificando cuenta...', 'loading');
+
+    // 1. Verify credentials via player_api
+    let info;
+    try {
+      const apiUrl = `${server}/player_api.php?username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`;
+      const res = await fetch(apiUrl);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      info = await res.json();
+      if (!info.user_info) throw new Error('Respuesta inesperada del servidor');
+      if (info.user_info.auth === 0) throw new Error('Usuario o contraseña incorrectos');
+    } catch (err) {
+      setStatus('Error de conexión: ' + err.message, 'error');
+      return;
+    }
+
+    const exp = info.user_info.exp_date
+      ? new Date(parseInt(info.user_info.exp_date, 10) * 1000).toLocaleDateString()
+      : 'sin fecha';
+    setStatus(`Conectado como "${info.user_info.username}" · vence ${exp} · cargando canales...`, 'loading');
+
+    // 2. Fetch M3U playlist
+    const types = xcGetSelectedTypes();
+    if (!types.length) { setStatus('Selecciona al menos un tipo de contenido.', 'error'); return; }
+
+    const typeParam = types.includes('live') && types.length === 1 ? 'live'
+                    : types.includes('vod')  && types.length === 1 ? 'vod'
+                    : 'all';
+    // m3u_plus gives extended #EXTINF with all metadata
+    const m3uUrl = `${server}/get.php?username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}&type=m3u_plus&output=ts`;
+    try {
+      const res = await fetch(m3uUrl);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const text = await res.text();
+
+      let channels = M3UParser.parse(text);
+
+      // filter by selected types using group naming heuristic if not all
+      if (typeParam !== 'all') {
+        channels = channels.filter(c => {
+          if (types.includes('live') && !types.includes('vod') && !types.includes('series')) return true;
+          return true; // full m3u_plus already filtered server-side when possible
+        });
+      }
+
+      if (!channels.length) { setStatus('No se encontraron canales.', 'error'); return; }
+
+      if (xcSave.checked) {
+        Storage.saveAccount({ server, user, pass, types, label: info.user_info.username || user });
+        renderSavedAccounts();
+      }
+
+      const added = mergeChannels(channels);
+      activeGroup = 'Todos';
+      renderAll();
+      closeModal();
+      setStatus(`✓ ${added} canales nuevos · ${channels.length} total importados.`, 'success');
+    } catch (err) {
+      setStatus('Error al descargar lista: ' + err.message, 'error');
+    }
+  }
+
+  function renderSavedAccounts() {
+    const accounts = Storage.loadAccounts();
+    xcSavedList.innerHTML = '';
+    if (!accounts.length) {
+      xcSavedList.innerHTML = '<span class="muted-note">Ninguna cuenta guardada</span>';
+      return;
+    }
+    accounts.forEach(acc => {
+      const row = document.createElement('div');
+      row.className = 'xc-account-row';
+
+      const info = document.createElement('button');
+      info.className = 'xc-account-btn';
+      const host = (() => { try { return new URL(acc.server).host; } catch { return acc.server; } })();
+      info.textContent = `${acc.label || acc.user} @ ${host}`;
+      info.title = 'Cargar esta cuenta';
+      info.addEventListener('click', () => {
+        xcServer.value = acc.server;
+        xcUser.value   = acc.user;
+        xcPass.value   = acc.pass;
+        // restore type checkboxes
+        document.querySelectorAll('input[name="xc-type"]').forEach(cb => {
+          cb.checked = acc.types ? acc.types.includes(cb.value) : cb.value === 'live';
+        });
+      });
+
+      const del = document.createElement('button');
+      del.className = 'xc-account-del';
+      del.textContent = '✕';
+      del.title = 'Eliminar cuenta guardada';
+      del.addEventListener('click', () => {
+        Storage.deleteAccount(acc.server, acc.user);
+        renderSavedAccounts();
+      });
+
+      row.appendChild(info);
+      row.appendChild(del);
+      xcSavedList.appendChild(row);
+    });
+  }
+
+  btnTogglePass.addEventListener('click', () => {
+    xcPass.type = xcPass.type === 'password' ? 'text' : 'password';
+    btnTogglePass.textContent = xcPass.type === 'password' ? '👁' : '🙈';
+  });
+
   // ── Modal ──────────────────────────────────────────────────────────────────
-  let activeTab = 'url';
+  let activeTab = 'xtream';
 
   function openModal() {
     modal.classList.remove('hidden');
@@ -193,6 +324,7 @@
     inputUrl.value = '';
     inputPaste.value = '';
     modalDropLabel.textContent = 'Arrastra el archivo .m3u aquí o haz clic';
+    renderSavedAccounts();
   }
 
   function closeModal() {
@@ -217,9 +349,19 @@
   modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 
   btnModalImport.addEventListener('click', () => {
-    if (activeTab === 'url') importFromUrl(inputUrl.value.trim());
-    else if (activeTab === 'paste') importText(inputPaste.value.trim());
-    else if (activeTab === 'file') importFromFile(modalFileInput.files[0]);
+    if (activeTab === 'xtream') {
+      const server = xcNormalizeServer(xcServer.value);
+      const user   = xcUser.value.trim();
+      const pass   = xcPass.value;
+      if (!server || !user || !pass) { setStatus('Completa servidor, usuario y contraseña.', 'error'); return; }
+      xcConnect(server, user, pass);
+    } else if (activeTab === 'url') {
+      importFromUrl(inputUrl.value.trim());
+    } else if (activeTab === 'paste') {
+      importText(inputPaste.value.trim());
+    } else if (activeTab === 'file') {
+      importFromFile(modalFileInput.files[0]);
+    }
   });
 
   modalFileInput.addEventListener('change', () => {
