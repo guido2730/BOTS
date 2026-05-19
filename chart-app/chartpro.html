@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ChartPro</title>
+<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.development.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #0d0d1a; color: #fff; font-family: Inter, system-ui, sans-serif; overflow: hidden; }
+
+  #topbar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 14px; background: #0d0d1a; border-bottom: 1px solid #2d2d44;
+    flex-wrap: wrap;
+  }
+  #topbar .logo { color: #6c5ce7; font-weight: 800; font-size: 17px; margin-right: 6px; }
+  #topbar select {
+    background: #1e1e35; color: #fff; border: 1px solid #3d3d5c;
+    border-radius: 6px; padding: 4px 8px; font-size: 13px; cursor: pointer;
+  }
+  #intervals { display: flex; gap: 3px; }
+  .iv-btn {
+    padding: 3px 9px; border-radius: 5px; border: none; cursor: pointer;
+    font-size: 12px; background: #2d2d44; color: #ccc; transition: all .15s;
+  }
+  .iv-btn.active { background: #6c5ce7; color: #fff; }
+
+  #togglebar {
+    display: flex; gap: 7px; flex-wrap: wrap;
+    padding: 7px 14px; background: #1a1a2e; border-bottom: 1px solid #2d2d44;
+  }
+  .ind-btn {
+    padding: 4px 13px; border-radius: 20px; border: none;
+    cursor: pointer; font-size: 12px; font-weight: 600;
+    background: #2d2d44; color: #888; transition: all .2s;
+  }
+  .ind-btn.active { color: #0d0d1a; }
+
+  #charts-wrap { display: flex; flex-direction: column; height: calc(100vh - 84px); overflow-y: auto; }
+  .panel { width: 100%; position: relative; }
+  .panel-label {
+    font-size: 10px; color: #666; padding: 2px 8px;
+    background: #12122a; border-top: 1px solid #2d2d44;
+  }
+  #loading {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    color: #6c5ce7; font-size: 18px;
+  }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <span class="logo">📈 ChartPro</span>
+  <select id="sym"></select>
+  <div id="intervals"></div>
+</div>
+<div id="togglebar"></div>
+<div id="charts-wrap">
+  <div id="loading">Cargando...</div>
+  <div class="panel" id="main-panel"></div>
+  <div id="rsi-wrap" style="display:none"><div class="panel-label">RSI (14)</div><div class="panel" id="rsi-panel"></div></div>
+  <div id="macd-wrap" style="display:none"><div class="panel-label">MACD (12,26,9)</div><div class="panel" id="macd-panel"></div></div>
+  <div id="stoch-wrap" style="display:none"><div class="panel-label">Estocástico (14,3)</div><div class="panel" id="stoch-panel"></div></div>
+  <div id="cipher-wrap" style="display:none"><div class="panel-label">Cipher B — WaveTrend</div><div class="panel" id="cipher-panel"></div></div>
+</div>
+
+<script>
+// ─── CONFIG ────────────────────────────────────────────────
+const PAIRS = ['BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','XRPUSDT','ADAUSDT','DOGEUSDT','AVAXUSDT','LINKUSDT','DOTUSDT'];
+const INTERVALS = ['1m','5m','15m','30m','1h','4h','1d','1w'];
+const INDICATORS = [
+  { key:'ema',       label:'EMA',         color:'#f5a623' },
+  { key:'bollinger', label:'Bollinger',   color:'#7ed6df' },
+  { key:'volume',    label:'Volumen',     color:'#a29bfe' },
+  { key:'rsi',       label:'RSI',         color:'#00b894' },
+  { key:'macd',      label:'MACD',        color:'#fd79a8' },
+  { key:'stoch',     label:'Estocástico', color:'#fdcb6e' },
+  { key:'cipher',    label:'Cipher B',    color:'#6c5ce7' },
+];
+
+const state = {
+  symbol: 'BTCUSDT', interval: '1h',
+  active: { ema:true, bollinger:false, volume:true, rsi:true, macd:false, stoch:false, cipher:false },
+  candles: [], charts: [], ws: null,
+};
+
+// ─── INDICATORS ────────────────────────────────────────────
+function ema(arr, p) {
+  const k = 2/(p+1); let e = arr.slice(0,p).reduce((a,b)=>a+b,0)/p;
+  const out = new Array(p-1).fill(null); out.push(e);
+  for (let i=p;i<arr.length;i++) { e = arr[i]*k+e*(1-k); out.push(e); }
+  return out;
+}
+
+function rsi(closes, p=14) {
+  const out = new Array(p).fill(null);
+  let ag=0,al=0;
+  for (let i=1;i<=p;i++) { const d=closes[i]-closes[i-1]; d>0?ag+=d:al+=Math.abs(d); }
+  ag/=p; al/=p;
+  out.push(al===0?100:100-100/(1+ag/al));
+  for (let i=p+1;i<closes.length;i++) {
+    const d=closes[i]-closes[i-1];
+    ag=(ag*(p-1)+Math.max(d,0))/p; al=(al*(p-1)+Math.max(-d,0))/p;
+    out.push(al===0?100:100-100/(1+ag/al));
+  }
+  return out;
+}
+
+function macd(closes, fast=12, slow=26, sig=9) {
+  const ef=ema(closes,fast), es=ema(closes,slow);
+  const ml=ef.map((f,i)=>f!==null&&es[i]!==null?f-es[i]:null);
+  const vals=ml.filter(v=>v!==null);
+  const sr=ema(vals,sig);
+  const sl=[]; let fi=0;
+  for (let i=0;i<ml.length;i++) { if(ml[i]===null){sl.push(null);}else{sl.push(sr[fi]??null);fi++;} }
+  const hist=ml.map((m,i)=>m!==null&&sl[i]!==null?m-sl[i]:null);
+  return {ml,sl,hist};
+}
+
+function bollinger(closes, p=20, mult=2) {
+  const up=[],mid=[],lo=[];
+  for (let i=0;i<closes.length;i++) {
+    if(i<p-1){up.push(null);mid.push(null);lo.push(null);continue;}
+    const s=closes.slice(i-p+1,i+1);
+    const sma=s.reduce((a,b)=>a+b,0)/p;
+    const std=Math.sqrt(s.reduce((a,b)=>a+(b-sma)**2,0)/p);
+    up.push(sma+mult*std); mid.push(sma); lo.push(sma-mult*std);
+  }
+  return {up,mid,lo};
+}
+
+function stochastic(hi,lo,cl,kp=14,dp=3) {
+  const k=[];
+  for (let i=0;i<cl.length;i++) {
+    if(i<kp-1){k.push(null);continue;}
+    const sh=hi.slice(i-kp+1,i+1),sl=lo.slice(i-kp+1,i+1);
+    const hh=Math.max(...sh),ll=Math.min(...sl);
+    k.push(hh===ll?0:((cl[i]-ll)/(hh-ll))*100);
+  }
+  const d=[];
+  for (let i=0;i<k.length;i++) {
+    if(i<kp-1+dp-1){d.push(null);continue;}
+    const sl=k.slice(i-dp+1,i+1).filter(v=>v!==null);
+    d.push(sl.length===dp?sl.reduce((a,b)=>a+b,0)/dp:null);
+  }
+  return {k,d};
+}
+
+function cipherB(hi,lo,cl,vol,wcl=9,wal=12,wml=3) {
+  const n=cl.length;
+  const ap=hi.map((_,i)=>(hi[i]+lo[i]+cl[i])/3);
+  const esa=ema(ap,wcl).map((v,i)=>v??ap[i]);
+  const dArr=ap.map((v,i)=>Math.abs(v-esa[i]));
+  const d=ema(dArr,wcl).map((v,i)=>v??dArr[i]);
+  const ci=ap.map((v,i)=>d[i]!==0?(v-esa[i])/(0.015*d[i]):0);
+  const tci=ema(ci,wal).map((v,i)=>v??ci[i]);
+  const wt1=tci;
+  const wt2=ema(wt1,wml).map((v,i)=>v??wt1[i]);
+  const buy=wt1.map((_,i)=>i>0&&wt1[i-1]<wt2[i-1]&&wt1[i]>=wt2[i]&&wt1[i]<-53);
+  const sell=wt1.map((_,i)=>i>0&&wt1[i-1]>wt2[i-1]&&wt1[i]<=wt2[i]&&wt1[i]>53);
+  return {wt1,wt2,buy,sell};
+}
+
+// ─── CHART ENGINE ──────────────────────────────────────────
+const COPT = {
+  layout:{background:{type:'solid',color:'#0d0d1a'},textColor:'#aaa'},
+  grid:{vertLines:{color:'#1a1a2e'},horzLines:{color:'#1a1a2e'}},
+  crosshair:{mode:1},
+  timeScale:{borderColor:'#2d2d44',timeVisible:true},
+  rightPriceScale:{borderColor:'#2d2d44'},
+  handleScroll:true, handleScale:true,
+};
+
+function toSeries(vals, times) {
+  return vals.map((v,i)=>v!==null?{time:times[i],value:v}:null).filter(Boolean);
+}
+
+function buildCharts() {
+  // destroy old
+  state.charts.forEach(c=>c.remove());
+  state.charts=[];
+
+  document.getElementById('loading').style.display='none';
+  const cd=state.candles; if(!cd||cd.length<30) return;
+
+  const times=cd.map(c=>c.time);
+  const closes=cd.map(c=>c.close);
+  const highs=cd.map(c=>c.high);
+  const lows=cd.map(c=>c.low);
+  const vols=cd.map(c=>c.volume);
+  const act=state.active;
+
+  // ── Main ──
+  const main=LightweightCharts.createChart(document.getElementById('main-panel'),{...COPT,height:420});
+  state.charts.push(main);
+  const cSeries=main.addCandlestickSeries({upColor:'#00b894',downColor:'#d63031',borderUpColor:'#00b894',borderDownColor:'#d63031',wickUpColor:'#00b894',wickDownColor:'#d63031'});
+  cSeries.setData(cd.map(c=>({time:c.time,open:c.open,high:c.high,low:c.low,close:c.close})));
+
+  if (act.ema) {
+    [[9,'#f5a623'],[21,'#e17055'],[50,'#74b9ff']].forEach(([p,col])=>{
+      const s=main.addLineSeries({color:col,lineWidth:1});
+      s.setData(toSeries(ema(closes,p),times));
+    });
+  }
+  if (act.bollinger) {
+    const bb=bollinger(closes);
+    const dashed={lineStyle:2};
+    main.addLineSeries({color:'#7ed6df',lineWidth:1,...dashed}).setData(toSeries(bb.up,times));
+    main.addLineSeries({color:'#7ed6df',lineWidth:1}).setData(toSeries(bb.mid,times));
+    main.addLineSeries({color:'#7ed6df',lineWidth:1,...dashed}).setData(toSeries(bb.lo,times));
+  }
+  if (act.volume) {
+    const vs=main.addHistogramSeries({priceFormat:{type:'volume'},priceScaleId:'vol'});
+    main.priceScale('vol').applyOptions({scaleMargins:{top:0.8,bottom:0}});
+    vs.setData(cd.map(c=>({time:c.time,value:c.volume,color:c.close>=c.open?'#00b89455':'#d6303155'})));
+  }
+  main.timeScale().fitContent();
+
+  // ── RSI ──
+  document.getElementById('rsi-wrap').style.display=act.rsi?'':'none';
+  if (act.rsi) {
+    const rc=LightweightCharts.createChart(document.getElementById('rsi-panel'),{...COPT,height:130});
+    state.charts.push(rc);
+    rc.addLineSeries({color:'#00b894',lineWidth:2}).setData(toSeries(rsi(closes),times));
+    [30,50,70].forEach(lvl=>rc.addLineSeries({color:'#ffffff22',lineWidth:1,lineStyle:2}).setData(times.map(t=>({time:t,value:lvl}))));
+    rc.timeScale().fitContent();
+  }
+
+  // ── MACD ──
+  document.getElementById('macd-wrap').style.display=act.macd?'':'none';
+  if (act.macd) {
+    const mc=LightweightCharts.createChart(document.getElementById('macd-panel'),{...COPT,height:130});
+    state.charts.push(mc);
+    const {ml,sl,hist}=macd(closes);
+    mc.addHistogramSeries().setData(hist.map((v,i)=>v!==null?{time:times[i],value:v,color:v>=0?'#00b89488':'#d6303188'}:null).filter(Boolean));
+    mc.addLineSeries({color:'#fd79a8',lineWidth:1}).setData(toSeries(ml,times));
+    mc.addLineSeries({color:'#fdcb6e',lineWidth:1}).setData(toSeries(sl,times));
+    mc.timeScale().fitContent();
+  }
+
+  // ── Stoch ──
+  document.getElementById('stoch-wrap').style.display=act.stoch?'':'none';
+  if (act.stoch) {
+    const sc=LightweightCharts.createChart(document.getElementById('stoch-panel'),{...COPT,height:130});
+    state.charts.push(sc);
+    const {k,d}=stochastic(highs,lows,closes);
+    sc.addLineSeries({color:'#fdcb6e',lineWidth:2}).setData(toSeries(k,times));
+    sc.addLineSeries({color:'#e17055',lineWidth:1}).setData(toSeries(d,times));
+    [20,80].forEach(lvl=>sc.addLineSeries({color:'#ffffff22',lineWidth:1,lineStyle:2}).setData(times.map(t=>({time:t,value:lvl}))));
+    sc.timeScale().fitContent();
+  }
+
+  // ── Cipher B ──
+  document.getElementById('cipher-wrap').style.display=act.cipher?'':'none';
+  if (act.cipher) {
+    const cc=LightweightCharts.createChart(document.getElementById('cipher-panel'),{...COPT,height:150});
+    state.charts.push(cc);
+    const {wt1,wt2,buy,sell}=cipherB(highs,lows,closes,vols);
+    const wt1s=cc.addLineSeries({color:'#6c5ce7',lineWidth:2});
+    wt1s.setData(wt1.map((v,i)=>({time:times[i],value:v})));
+    cc.addLineSeries({color:'#fd79a8',lineWidth:1}).setData(wt2.map((v,i)=>({time:times[i],value:v})));
+    cc.addLineSeries({color:'#ffffff22',lineWidth:1,lineStyle:2}).setData(times.map(t=>({time:t,value:0})));
+    [-53,53].forEach(lvl=>cc.addLineSeries({color:'#ffffff22',lineWidth:1,lineStyle:3}).setData(times.map(t=>({time:t,value:lvl}))));
+    const markers=[
+      ...buy.map((b,i)=>b?{time:times[i],position:'belowBar',color:'#00b894',shape:'arrowUp',text:'B'}:null).filter(Boolean),
+      ...sell.map((s,i)=>s?{time:times[i],position:'aboveBar',color:'#d63031',shape:'arrowDown',text:'S'}:null).filter(Boolean),
+    ].sort((a,b)=>a.time-b.time);
+    wt1s.setMarkers(markers);
+    cc.timeScale().fitContent();
+  }
+
+  // Sync timescales
+  const all=state.charts;
+  all.forEach((src,si)=>{
+    src.timeScale().subscribeVisibleLogicalRangeChange(range=>{
+      if(!range)return;
+      all.forEach((dst,di)=>{ if(di!==si) dst.timeScale().setVisibleLogicalRange(range); });
+    });
+  });
+}
+
+// ─── DATA ──────────────────────────────────────────────────
+async function loadCandles() {
+  document.getElementById('loading').style.display='block';
+  const {symbol,interval}=state;
+  const url=`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=500`;
+  const res=await fetch(url);
+  const data=await res.json();
+  state.candles=data.map(k=>({
+    time:k[0]/1000, open:parseFloat(k[1]), high:parseFloat(k[2]),
+    low:parseFloat(k[3]), close:parseFloat(k[4]), volume:parseFloat(k[5]),
+  }));
+  buildCharts();
+}
+
+function connectWS() {
+  if (state.ws) state.ws.close();
+  const {symbol,interval}=state;
+  const ws=new WebSocket(`wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@kline_${interval}`);
+  ws.onmessage=e=>{
+    const k=JSON.parse(e.data).k;
+    if(!k.x) return;
+    const c={time:k.t/1000,open:parseFloat(k.o),high:parseFloat(k.h),low:parseFloat(k.l),close:parseFloat(k.c),volume:parseFloat(k.v)};
+    const cd=state.candles;
+    if(cd.length&&cd[cd.length-1].time===c.time) cd[cd.length-1]=c;
+    else cd.push(c);
+    buildCharts();
+  };
+  state.ws=ws;
+}
+
+function reload() { loadCandles().then(()=>connectWS()); }
+
+// ─── UI SETUP ──────────────────────────────────────────────
+const symSel=document.getElementById('sym');
+PAIRS.forEach(p=>{ const o=document.createElement('option'); o.value=o.textContent=p; symSel.appendChild(o); });
+symSel.addEventListener('change',e=>{ state.symbol=e.target.value; reload(); });
+
+const ivWrap=document.getElementById('intervals');
+INTERVALS.forEach(iv=>{
+  const b=document.createElement('button');
+  b.className='iv-btn'+(iv===state.interval?' active':'');
+  b.textContent=iv;
+  b.onclick=()=>{
+    state.interval=iv;
+    document.querySelectorAll('.iv-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    reload();
+  };
+  ivWrap.appendChild(b);
+});
+
+const togWrap=document.getElementById('togglebar');
+INDICATORS.forEach(({key,label,color})=>{
+  const b=document.createElement('button');
+  b.className='ind-btn'+(state.active[key]?' active':'');
+  b.textContent=label;
+  b.style.setProperty('--c',color);
+  if(state.active[key]) b.style.background=color;
+  b.onclick=()=>{
+    state.active[key]=!state.active[key];
+    b.classList.toggle('active');
+    b.style.background=state.active[key]?color:'#2d2d44';
+    b.style.color=state.active[key]?'#0d0d1a':'#888';
+    buildCharts();
+  };
+  togWrap.appendChild(b);
+});
+
+// ─── INIT ──────────────────────────────────────────────────
+reload();
+</script>
+</body>
+</html>
