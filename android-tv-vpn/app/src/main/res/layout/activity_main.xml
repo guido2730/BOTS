@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:padding="48dp">
+
+    <TextView
+        android:id="@+id/tvAppTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:text="@string/app_name"
+        android:textColor="@color/textPrimary"
+        android:textSize="32sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="32dp"
+        android:textColor="@color/colorAccent"
+        android:textSize="22sp"
+        tools:text="Estado: Desconectado" />
+
+    <ImageView
+        android:id="@+id/ivTargetIcon"
+        android:layout_width="96dp"
+        android:layout_height="96dp"
+        android:layout_marginBottom="12dp"
+        android:contentDescription="@string/target_app_icon_desc" />
+
+    <TextView
+        android:id="@+id/tvTargetAppName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="40dp"
+        android:textColor="@color/textPrimary"
+        android:textSize="20sp"
+        tools:text="Ninguna app seleccionada" />
+
+    <Button
+        android:id="@+id/btnSelectApp"
+        style="@style/TvButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/action_select_app" />
+
+    <Button
+        android:id="@+id/btnConfigureVpn"
+        style="@style/TvButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/action_configure_vpn" />
+
+    <Button
+        android:id="@+id/btnConnectToggle"
+        style="@style/TvButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:enabled="false"
+        android:text="@string/action_connect" />
+
+    <TextView
+        android:id="@+id/tvHint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="40dp"
+        android:gravity="center"
+        android:text="@string/hint_setup_order"
+        android:textColor="@color/textSecondary"
+        android:textSize="14sp" />
+
+</LinearLayout>

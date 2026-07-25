@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TV VPN (App objetivo)</string>
+
+    <string name="status_connected">Estado: Conectado</string>
+    <string name="status_disconnected">Estado: Desconectado</string>
+
+    <string name="no_target_app_selected">Ninguna app seleccionada</string>
+    <string name="target_app_icon_desc">Icono de la app objetivo</string>
+
+    <string name="action_select_app">Elegir app objetivo</string>
+    <string name="action_configure_vpn">Configurar servidor VPN</string>
+    <string name="action_connect">Conectar</string>
+    <string name="action_disconnect">Desconectar</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_save">Guardar</string>
+
+    <string name="hint_setup_order">1) Elegí la app objetivo. 2) Configurá el servidor VPN (WireGuard). 3) Conectá.\nSolo la app objetivo usará la VPN; el resto del Android TV navega normal.</string>
+
+    <string name="picker_title">Elegí la app objetivo</string>
+
+    <string name="config_title">Servidor VPN (WireGuard)</string>
+    <string name="config_help">Pegá acá el contenido de una configuración WireGuard (.conf) con secciones [Interface] y [Peer]. No hace falta que incluyas IncludedApplications: la app lo agrega sola para restringir la VPN únicamente a la app objetivo.\n\nSi no tenés servidor propio, podés generar una configuración WireGuard gratuita desde el sitio oficial de ProtonVPN (cuenta gratis, sección Downloads) o Windscribe (plan gratuito). Evitá listas sueltas de \"VPN públicas\" de internet: no sabés quién opera esos servidores y pueden ver todo tu tráfico.</string>
+
+    <string name="config_saved">Configuración guardada</string>
+    <string name="error_empty_config">La configuración no puede estar vacía</string>
+    <string name="error_invalid_config">Configuración inválida: %1$s</string>
+    <string name="error_missing_setup">Elegí una app objetivo y configurá el servidor VPN primero</string>
+    <string name="error_connect">No se pudo conectar: %1$s</string>
+    <string name="error_disconnect">No se pudo desconectar: %1$s</string>
+    <string name="vpn_permission_denied">Permiso de VPN denegado por el sistema</string>
+</resources>
