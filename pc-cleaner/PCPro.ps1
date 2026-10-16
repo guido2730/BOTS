@@ -205,8 +205,50 @@ if ($Drivers) {
   if ($bad) { $bad | ForEach-Object { Write-Log ("  ! {0} [{1}] {2}" -f $_.FriendlyName, $_.Class, $_.Status) 'Yellow' } }
   else { Write-Log '  Ninguno.' 'Green' }
 
-  Write-Log "`nGPU / chipset / BIOS: Windows Update suele ir por detras del fabricante."
-  Write-Log '  GPU: NVIDIA App / AMD Adrenalin / Intel Driver & Support Assistant. BIOS: sitio del fabricante.' 'Yellow'
+  # PC de escritorio generica: GPU, chipset y BIOS dependen de la placa base y la tarjeta grafica
+  Write-Log "`nHardware detectado (GPU, chipset y BIOS: Windows Update suele ir por detras):"
+  $bb   = Get-CimInstance Win32_BaseBoard
+  $bios = Get-CimInstance Win32_BIOS
+  $cpu  = Get-CimInstance Win32_Processor | Select-Object -First 1
+  Write-Log ("  Placa base : {0} {1}" -f $bb.Manufacturer, $bb.Product)
+  Write-Log ("  BIOS       : {0} v{1} ({2:yyyy-MM-dd})" -f $bios.Manufacturer, $bios.SMBIOSBIOSVersion, $bios.ReleaseDate)
+  Write-Log ("  CPU        : {0}" -f $cpu.Name.Trim())
+  $gpus = Get-CimInstance Win32_VideoController | Where-Object { $_.Name -notmatch 'Basic|Remote|Virtual' }
+  foreach ($g in $gpus) {
+    Write-Log ("  GPU        : {0}  driver {1} ({2:yyyy-MM-dd})" -f $g.Name, $g.DriverVersion, $g.DriverDate)
+  }
+
+  $wg = Get-Command winget -ErrorAction SilentlyContinue
+  foreach ($g in $gpus) {
+    switch -Regex ($g.Name) {
+      'NVIDIA' {
+        Write-Log '  -> NVIDIA: usa NVIDIA App (winget id: Nvidia.NVIDIAApp). Instalacion "Driver Game Ready" o "Studio".' 'Yellow'
+        if ($Apply -and $wg -and -not (winget list --id Nvidia.NVIDIAApp 2>$null | Select-String 'NVIDIAApp')) {
+          winget install --id Nvidia.NVIDIAApp -e --silent --accept-package-agreements --accept-source-agreements
+        }
+      }
+      'AMD|Radeon' { Write-Log '  -> AMD: descarga Adrenalin desde https://www.amd.com/en/support (autodetecta tu modelo).' 'Yellow' }
+      'Intel'      {
+        Write-Log '  -> Intel: Driver & Support Assistant (winget id: Intel.IntelDriverAndSupportAssistant).' 'Yellow'
+        if ($Apply -and $wg -and -not (winget list --id Intel.IntelDriverAndSupportAssistant 2>$null | Select-String 'Intel')) {
+          winget install --id Intel.IntelDriverAndSupportAssistant -e --silent --accept-package-agreements --accept-source-agreements
+        }
+      }
+    }
+  }
+  $mb = $bb.Manufacturer
+  $url = switch -Regex ($mb) {
+    'ASUS'     { 'https://www.asus.com/support/download-center/' }
+    'Micro-Star|MSI' { 'https://www.msi.com/support/download/' }
+    'Gigabyte' { 'https://www.gigabyte.com/Support' }
+    'ASRock'   { 'https://www.asrock.com/support/index.asp' }
+    'Biostar'  { 'https://www.biostar.com.tw/app/en/support/download.php' }
+    default    { $null }
+  }
+  if ($url) { Write-Log ("  -> Placa {0}: busca '{1}' en {2} (chipset, LAN, audio, BIOS)." -f $mb, $bb.Product, $url) 'Yellow' }
+  else { Write-Log "  -> Busca '$($bb.Product)' en el sitio de $mb para chipset, LAN, audio y BIOS." 'Yellow' }
+  if ($cpu.Name -match 'AMD|Ryzen') { Write-Log '  -> Chipset AMD: https://www.amd.com/en/support/download/drivers.html (Chipset).' 'Yellow' }
+  Write-Log '  BIOS: NO se automatiza. Actualizala a mano, con corriente estable y solo si hay un fix que necesites.' 'Red'
 }
 
 # =====================================================================

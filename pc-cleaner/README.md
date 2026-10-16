@@ -21,7 +21,7 @@ Todo se registra en un `.log` en el Escritorio. Con `-Apply` se crea un punto de
 
 ## Límites (leer)
 
-- **Drivers de GPU, chipset y BIOS**: Windows Update suele traer versiones viejas. Usa NVIDIA App / AMD Adrenalin / Intel DSA / sitio del fabricante.
+- **Drivers de GPU, chipset y BIOS**: Windows Update suele traer versiones viejas. `-Drivers` detecta tu placa, CPU y GPU, instala NVIDIA App o Intel DSA vía winget si aplica, y te da el enlace del fabricante (ASUS, MSI, Gigabyte, ASRock, AMD). La BIOS nunca se automatiza.
 - **"Sin uso" es una estimación**: Windows no registra último uso. Se infiere de Prefetch (puede estar desactivado en SSD), último acceso del .exe y fecha de instalación. Revisa la lista antes de elegir.
 - **No incluye limpiador de registro, a propósito**: no libera espacio medible y es una causa frecuente de roturas.
 - Nunca se desinstala nada sin que tú elijas el ID y confirmes.
